@@ -1,0 +1,8 @@
+{
+  "name": "蔚蓝之城：珠江口传奇 (Azure City: Pearl River Delta Legend)",
+  "description": "A high-quality maritime management simulation game set in the Pearl River Delta. Features role-based gameplay, interactive maps, educational oceanography content, and AI-driven events.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
