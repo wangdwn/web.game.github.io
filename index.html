@@ -1,66 +1,372 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>蔚蓝之城：珠江口传奇</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Montserrat:wght@400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --ocean-deep: #0A2463;
-            --ocean-medium: #3E92CC;
-            --ocean-light: #7DD3FC;
-        }
-        body {
-            font-family: 'Noto Sans SC', sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: var(--ocean-deep);
-        }
-        .glass-panel {
-            background: rgba(10, 36, 99, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(125, 211, 252, 0.2);
-        }
-        @keyframes wave {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        .animate-wave {
-            animation: wave 3s ease-in-out infinite;
-        }
-        ::-webkit-scrollbar {
-            width: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.1);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(125, 211, 252, 0.3);
-            border-radius: 10px;
-        }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蔚蓝之城：珠江口传奇</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root { --deep:#0A2463; --mid:#3E92CC; --light:#7DD3FC; --gold:#F6C445; --coral:#FF6B6B; }
+body { font-family:'Noto Sans SC',sans-serif; overflow:hidden; background:var(--deep); color:#fff; user-select:none; }
+#game-container { width:100vw; height:100vh; display:grid; grid-template-columns:240px 1fr 260px; grid-template-rows:1fr 120px; gap:0; }
+#sidebar { grid-row:1/3; background:rgba(10,36,99,0.92); backdrop-filter:blur(12px); border-right:1px solid rgba(125,211,252,0.15); padding:16px; display:flex; flex-direction:column; overflow-y:auto; }
+#sidebar .logo { font-size:18px; font-weight:900; color:var(--gold); margin-bottom:16px; letter-spacing:2px; }
+.stat-item { background:rgba(125,211,252,0.08); border-radius:8px; padding:10px 12px; margin-bottom:8px; }
+.stat-item .label { font-size:11px; color:rgba(255,255,255,0.5); }
+.stat-item .value { font-size:18px; font-weight:700; margin-top:2px; }
+.stat-item .value.gold { color:var(--gold); }
+.stat-item .value.green { color:#4ADE80; }
+.stat-item .value.red { color:var(--coral); }
+.stat-item .value.blue { color:var(--light); }
+#main-area { grid-row:1/2; position:relative; overflow:hidden; background:linear-gradient(180deg,#0C1B4A 0%,#0A2463 30%,#1A4A7A 60%,#2A6A9A 100%); }
+#map-canvas { width:100%; height:100%; position:relative; }
+.hex-grid { position:absolute; top:0; left:0; width:100%; height:100%; }
+.hex-cell { position:absolute; width:90px; height:104px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; flex-direction:column; font-size:10px; }
+.hex-cell:hover { transform:scale(1.08); z-index:10; }
+.hex-cell .hex-bg { position:absolute; width:100%; height:100%; clip-path:polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); opacity:0.7; transition:all 0.2s; }
+.hex-cell:hover .hex-bg { opacity:1; }
+.hex-cell .icon { font-size:22px; position:relative; z-index:1; }
+.hex-cell .name { position:relative; z-index:1; font-size:9px; margin-top:2px; text-shadow:0 1px 3px rgba(0,0,0,0.8); }
+.zone-label { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:rgba(255,255,255,0.08); font-size:80px; font-weight:900; letter-spacing:10px; pointer-events:none; }
+#right-panel { grid-row:1/2; background:rgba(10,36,99,0.9); backdrop-filter:blur(12px); border-left:1px solid rgba(125,211,252,0.15); padding:16px; overflow-y:auto; }
+#right-panel h3 { font-size:13px; color:var(--light); margin-bottom:10px; border-bottom:1px solid rgba(125,211,252,0.15); padding-bottom:6px; }
+.event-card { background:rgba(125,211,252,0.06); border-radius:8px; padding:10px; margin-bottom:8px; font-size:12px; cursor:pointer; transition:all 0.2s; }
+.event-card:hover { background:rgba(125,211,252,0.12); }
+.event-card .time { color:rgba(255,255,255,0.4); font-size:10px; }
+.event-card .title { font-weight:500; margin:2px 0; }
+.event-card .desc { color:rgba(255,255,255,0.6); font-size:11px; }
+#bottom-bar { grid-column:2/4; background:rgba(10,36,99,0.85); backdrop-filter:blur(12px); border-top:1px solid rgba(125,211,252,0.15); padding:12px 20px; display:flex; align-items:center; gap:16px; }
+#bottom-bar .action-btn { padding:8px 16px; border-radius:8px; border:1px solid rgba(125,211,252,0.3); background:rgba(125,211,252,0.1); color:#fff; cursor:pointer; font-size:12px; transition:all 0.2s; font-family:inherit; white-space:nowrap; }
+#bottom-bar .action-btn:hover { background:rgba(125,211,252,0.25); border-color:var(--light); }
+#bottom-bar .action-btn.primary { background:var(--mid); border-color:var(--mid); font-weight:500; }
+#bottom-bar .action-btn.primary:hover { background:#4AA0D8; }
+.modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; z-index:100; }
+.modal-overlay.active { display:flex; }
+.modal { background:linear-gradient(135deg,#0f3460,#16213e); border:1px solid rgba(125,211,252,0.3); border-radius:16px; padding:24px; max-width:480px; width:90%; max-height:80vh; overflow-y:auto; }
+.modal h2 { font-size:18px; color:var(--gold); margin-bottom:12px; }
+.modal p { font-size:13px; color:rgba(255,255,255,0.7); line-height:1.7; margin-bottom:12px; }
+.modal .btn { padding:8px 20px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-family:inherit; transition:all 0.2s; }
+.modal .btn-primary { background:var(--mid); color:#fff; }
+.modal .btn-primary:hover { background:#4AA0D8; }
+.modal .btn-gold { background:var(--gold); color:var(--deep); font-weight:700; }
+.modal .btn-gold:hover { background:#E0B030; }
+.science-card { background:rgba(125,211,252,0.06); border-radius:8px; padding:10px; margin-bottom:8px; font-size:12px; border-left:3px solid var(--gold); }
+.science-card .title { font-weight:700; color:var(--gold); }
+.toast { position:fixed; bottom:140px; left:50%; transform:translateX(-50%); background:rgba(10,36,99,0.95); backdrop-filter:blur(12px); border:1px solid var(--gold); border-radius:12px; padding:12px 24px; font-size:14px; color:var(--gold); display:none; z-index:50; animation:toastUp 0.3s ease; }
+@keyframes toastUp { from { opacity:0; transform:translateX(-50%) translateY(20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+.ship-animation { position:absolute; font-size:30px; animation:shipMove 20s linear infinite; pointer-events:none; }
+@keyframes shipMove { 0% { left:-5%; top:40%; } 50% { left:50%; top:35%; } 100% { left:105%; top:40%; } }
+@media (max-width:768px) { #game-container { grid-template-columns:1fr; grid-template-rows:auto 1fr auto auto; } #sidebar { grid-row:auto; } #right-panel { grid-row:auto; } #bottom-bar { grid-column:1; } }
+</style>
 </head>
 <body>
-    <div id="root"></div>
-    <!-- 使用相对路径，Vite 会在构建时自动识别并处理 -->
-    <script type="module" src="./index.tsx"></script>
-<script type="module" src="/index.tsx"></script>
+<div id="game-container">
+  <!-- 左侧面板 -->
+  <div id="sidebar">
+    <div class="logo">🌊 蔚蓝之城</div>
+    <div class="stat-item"><div class="label">🗓 年份</div><div class="value blue" id="year">2026</div></div>
+    <div class="stat-item"><div class="label">💰 资金</div><div class="value gold" id="funds">1000</div></div>
+    <div class="stat-item"><div class="label">👥 人口</div><div class="value green" id="population">500</div></div>
+    <div class="stat-item"><div class="label">🏗 发展度</div><div class="value blue" id="development">0</div></div>
+    <div class="stat-item"><div class="label">🌿 生态分</div><div class="value green" id="ecology">80</div></div>
+    <div class="stat-item"><div class="label">⚡ 影响力</div><div class="value gold" id="influence">100</div></div>
+    <div style="margin-top:auto;padding-top:12px;">
+      <div style="font-size:11px;color:rgba(255,255,255,0.3);">珠江口 · 海洋城市计划</div>
+    </div>
+  </div>
+
+  <!-- 主地图 -->
+  <div id="main-area">
+    <div id="map-canvas">
+      <div class="zone-label">珠江口</div>
+      <div class="hex-grid" id="hex-grid"></div>
+      <div class="ship-animation" id="ship">⛵</div>
+    </div>
+  </div>
+
+  <!-- 右侧事件 -->
+  <div id="right-panel">
+    <h3>📋 事件日志</h3>
+    <div id="event-log"></div>
+  </div>
+
+  <!-- 底部操作栏 -->
+  <div id="bottom-bar">
+    <button class="action-btn primary" onclick="nextTurn()">⏭ 下一季度</button>
+    <button class="action-btn" onclick="openModal('build')">🏗 建设</button>
+    <button class="action-btn" onclick="openModal('research')">🔬 科研</button>
+    <button class="action-btn" onclick="openModal('science')">📖 海洋百科</button>
+    <button class="action-btn" onclick="saveGame()">💾 存档</button>
+    <button class="action-btn" onclick="loadGame()">📂 读档</button>
+    <div style="margin-left:auto;font-size:12px;color:rgba(255,255,255,0.3);" id="turn-display">第 1 季度</div>
+  </div>
+</div>
+
+<!-- 弹窗 -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== 游戏数据 =====
+const ZONES = [
+  {id:'a', name:'南沙港区', x:55, y:55, type:'port', desc:'深水良港，国际贸易枢纽', icon:'🚢', cost:80, devGain:8, ecoCost:5},
+  {id:'b', name:'海洋牧场', x:40, y:40, type:'eco', desc:'现代化海洋养殖基地', icon:'🐟', cost:50, devGain:4, ecoGain:8},
+  {id:'c', name:'科创园区', x:65, y:40, type:'tech', desc:'海洋科技研发中心', icon:'🔬', cost:120, devGain:15, ecoCost:3},
+  {id:'d', name:'红树林带', x:35, y:60, type:'eco', desc:'海岸生态屏障', icon:'🌿', cost:30, devGain:1, ecoGain:15},
+  {id:'e', name:'渔人码头', x:70, y:60, type:'commercial', desc:'文旅商业综合体', icon:'⚓', cost:60, devGain:6, ecoCost:2},
+  {id:'f', name:'深水试验场', x:50, y:35, type:'research', desc:'海洋装备测试基地', icon:'🧪', cost:100, devGain:12, ecoCost:4},
+  {id:'g', name:'滨海新城', x:45, y:75, type:'residential', desc:'生态宜居社区', icon:'🏙', cost:90, devGain:10, ecoCost:6},
+  {id:'h', name:'海上风电场', x:80, y:35, type:'energy', desc:'清洁能源基地', icon:'🌬', cost:70, devGain:5, ecoGain:10},
+  {id:'i', name:'珊瑚修复区', x:25, y:45, type:'eco', desc:'珊瑚礁生态重建', icon:'🪸', cost:40, devGain:2, ecoGain:12},
+];
+
+const EVENTS = [
+  {title:'台风来袭', desc:'强台风逼近珠江口，沿岸设施面临威胁', effect:{funds:-50, ecology:-5}, solve:'启动应急响应，加固设施'},
+  {title:'赤潮爆发', desc:'珠江口海域出现大面积赤潮', effect:{ecology:-10, population:-30}, solve:'投放治理菌群，限制排污'},
+  {title:'国际投资', desc:'跨国财团看好湾区发展，注资合作', effect:{funds:200}, solve:'签署合作协议'},
+  {title:'渔民转型', desc:'传统渔民希望获得海洋产业培训', effect:{population:50, funds:-20}, solve:'设立渔民培训中心'},
+  {title:'科研突破', desc:'海洋研究所取得碳汇技术重大突破', effect:{development:10, ecology:5}, solve:'推动产业化应用'},
+  {title:'白海豚观测', desc:'中华白海豚群出现在近岸水域', effect:{ecology:8, influence:5}, solve:'设立保护区'},
+  {title:'贸易争端', desc:'国际贸易摩擦影响港口吞吐量', effect:{funds:-80}, solve:'开拓新兴市场'},
+  {title:'青年创业潮', desc:'大批青年人才涌入海洋科技领域', effect:{population:100, development:8}, solve:'建设创业孵化器'},
+];
+
+const SCIENCE = [
+  {title:'可燃冰开采', desc:'南海神狐海域天然气水合物试采成功，储量相当于200亿吨石油。', icon:'🔥'},
+  {title:'多波束测深', desc:'利用声呐阵列对海底进行高精度三维扫描，精度可达厘米级。', icon:'📡'},
+  {title:'海洋碳汇', desc:'红树林、海草床、盐沼三大蓝碳生态系统，固碳效率是森林的10倍。', icon:'🌿'},
+  {title:'珊瑚礁修复', desc:'通过3D打印人工礁基+珊瑚移植，重建受损珊瑚生态系统。', icon:'🪸'},
+  {title:'温差发电', desc:'利用表层温水与深层冷水的温差驱动涡轮发电，清洁可持续。', icon:'⚡'},
+  {title:'海底古河道', desc:'珠江口海底埋藏着末次冰期时的古河道系统，是重要的淡水资源。', icon:'🌊'},
+];
+
+// ===== 游戏状态 =====
+let game = {
+  year: 2026, quarter: 1, funds: 1000, population: 500,
+  development: 0, ecology: 80, influence: 100,
+  buildings: {}, events: [], turn: 1
+};
+
+// ===== 初始化 =====
+function init() {
+  const grid = document.getElementById('hex-grid');
+  ZONES.forEach((z, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'hex-cell';
+    cell.style.left = z.x + '%';
+    cell.style.top = z.y + '%';
+    cell.style.marginLeft = '-45px';
+    cell.style.marginTop = '-52px';
+    cell.innerHTML = '<div class="hex-bg" style="background:'+getZoneColor(z.type)+'"></div><div class="icon">'+z.icon+'</div><div class="name">'+z.name+'</div>';
+    cell.onclick = () => showZoneInfo(z.id);
+    cell.id = 'hex-'+z.id;
+    grid.appendChild(cell);
+  });
+  updateUI();
+  logEvent('🏗 蔚蓝之城项目正式启动', '珠江口海洋城市计划开始实施');
+  document.getElementById('modal-overlay').onclick = function(e) { if(e.target==this) closeModal(); };
+}
+
+function getZoneColor(type) {
+  return {port:'#3E92CC', eco:'#4ADE80', tech:'#A78BFA', commercial:'#F6C445', research:'#FB923C', residential:'#F472B6', energy:'#60A5FA'}[type]||'#3E92CC';
+}
+
+// ===== UI更新 =====
+function updateUI() {
+  document.getElementById('year').textContent = game.year;
+  document.getElementById('funds').textContent = Math.round(game.funds).toLocaleString();
+  document.getElementById('population').textContent = Math.round(game.population).toLocaleString();
+  document.getElementById('development').textContent = Math.round(game.development);
+  document.getElementById('ecology').textContent = Math.round(game.ecology);
+  document.getElementById('influence').textContent = Math.round(game.influence);
+  document.getElementById('turn-display').textContent = '第 '+game.turn+' 季度';
+  // 更新格子状态
+  ZONES.forEach(z => {
+    const cell = document.getElementById('hex-'+z.id);
+    if(game.buildings[z.id]) {
+      cell.style.opacity = '1';
+      cell.querySelector('.hex-bg').style.opacity = '0.9';
+    } else {
+      cell.style.opacity = '0.5';
+      cell.querySelector('.hex-bg').style.opacity = '0.3';
+    }
+  });
+}
+
+function logEvent(title, desc) {
+  const log = document.getElementById('event-log');
+  const card = document.createElement('div');
+  card.className = 'event-card';
+  card.innerHTML = '<div class="time">第'+game.turn+'季度 · '+game.year+'年</div><div class="title">'+title+'</div><div class="desc">'+(desc||'')+'</div>';
+  card.onclick = () => showToast(desc);
+  log.insertBefore(card, log.firstChild);
+  if(log.children.length>12) log.removeChild(log.lastChild);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(()=>{t.style.display='none';}, 3000);
+}
+
+// ===== 游戏逻辑 =====
+function nextTurn() {
+  game.turn++; game.quarter++;
+  if(game.quarter>4) { game.quarter=1; game.year++; }
+
+  // 建筑收益
+  let income = 0, popGain = 0, devGain = 0, ecoChange = 0;
+  Object.keys(game.buildings).forEach(id => {
+    const z = ZONES.find(x=>x.id===id);
+    if(!z) return;
+    devGain += (z.devGain||0);
+    if(z.ecoCost) ecoChange -= z.ecoCost;
+    if(z.ecoGain) ecoChange += z.ecoGain;
+    income += Math.round((z.cost||50) * 0.08);
+  });
+  // 基础增长
+  popGain += Math.round(game.population * 0.03 + game.development * 0.5);
+  income += Math.round(game.development * 1.5);
+
+  game.funds += income;
+  game.population += popGain;
+  game.development += devGain;
+  game.ecology = Math.max(0, Math.min(100, game.ecology + ecoChange));
+
+  // 触发随机事件（30%概率）
+  if(Math.random()<0.3) {
+    const evt = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+    if(evt.effect.funds) game.funds += evt.effect.funds;
+    if(evt.effect.population) game.population += evt.effect.population;
+    if(evt.effect.ecology) game.ecology = Math.max(0, Math.min(100, game.ecology+evt.effect.ecology));
+    if(evt.effect.development) game.development += evt.effect.development;
+    if(evt.effect.influence) game.influence += evt.effect.influence;
+    logEvent('⚠ '+evt.title, evt.desc+' → '+evt.solve);
+  }
+
+  // 生态对人口的影响
+  if(game.ecology<30) game.population = Math.round(game.population*0.95);
+  if(game.ecology>70) game.population = Math.round(game.population*1.02);
+  // 资金不能为负
+  if(game.funds<0) { game.funds = 0; logEvent('💰 资金告急', '财政赤字，建议加快项目建设'); }
+
+  updateUI();
+  logEvent('📊 季度结算', '收入+'+income+'万 人口+'+popGain+' 发展+'+devGain);
+  if(game.turn%4===0) showToast('📈 '+game.year+'年度总结：发展度'+Math.round(game.development)+' 生态分'+Math.round(game.ecology));
+}
+
+function buildZone(id) {
+  const z = ZONES.find(x=>x.id===id);
+  if(!z) return;
+  if(game.buildings[id]) { showToast(z.name+' 已建设完成'); return; }
+  if(game.funds < z.cost) { showToast('❌ 资金不足，需要'+z.cost+'万'); return; }
+  game.funds -= z.cost;
+  game.buildings[id] = true;
+  game.development += (z.devGain||0);
+  if(z.ecoGain) game.ecology = Math.min(100, game.ecology+z.ecoGain);
+  if(z.ecoCost) game.ecology = Math.max(0, game.ecology-z.ecoCost);
+  game.population += Math.round(z.cost * 1.5);
+  game.influence += 5;
+  updateUI();
+  logEvent('🏗 建成：'+z.name, z.desc+' 投资'+z.cost+'万');
+  showToast('✅ '+z.name+' 建设完成！');
+  closeModal();
+}
+
+// ===== 模态框 =====
+function openModal(type) {
+  const overlay = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  let html = '';
+  if(type==='build') {
+    html = '<h2>🏗 建设新区</h2><p>选择要开发的区域：</p>';
+    ZONES.forEach(z => {
+      const built = game.buildings[z.id];
+      html += '<div class="science-card" onclick="'+(built?'':"buildZone('"+z.id+"')")+'" style="cursor:'+(built?'default':'pointer')+';opacity:'+(built?'0.5':'1')+'">';
+      html += '<div class="title">'+z.icon+' '+z.name+'</div>';
+      html += '<div>'+z.desc+'</div>';
+      if(built) html += '<div style="color:#4ADE80;font-size:11px;">✅ 已建成</div>';
+      else html += '<div style="color:var(--gold);font-size:11px;">💰 投资'+z.cost+'万 | 发展+'+z.devGain+(z.ecoCost?' 生态-'+z.ecoCost:' 生态+'+z.ecoGain)+'</div>';
+      html += '</div>';
+    });
+    html += '<div style="margin-top:12px;"><button class="btn btn-primary" onclick="closeModal()">关闭</button></div>';
+  } else if(type==='research') {
+    html = '<h2>🔬 科研突破</h2><p>投入研发资金，解锁科技加成：</p>';
+    html += '<div class="science-card" onclick="doResearch(50)"><div class="title">📡 海洋监测网络</div><div>投入50万，提升发展速度20%</div></div>';
+    html += '<div class="science-card" onclick="doResearch(80)"><div class="title">🌿 生态修复技术</div><div>投入80万，大幅提升生态分值</div></div>';
+    html += '<div class="science-card" onclick="doResearch(100)"><div class="title">🤖 智能港口系统</div><div>投入100万，提升资金收益30%</div></div>';
+    html += '<div class="science-card" onclick="doResearch(200)"><div class="title">⚡ 海洋能源网</div><div>投入200万，解锁新能源建筑</div></div>';
+    html += '<div style="margin-top:12px;"><button class="btn btn-primary" onclick="closeModal()">关闭</button></div>';
+  } else if(type==='science') {
+    html = '<h2>📖 海洋百科</h2><p>珠江口的地质海洋知识：</p>';
+    SCIENCE.forEach(s => {
+      html += '<div class="science-card"><div class="title">'+s.icon+' '+s.title+'</div><div>'+s.desc+'</div></div>';
+    });
+    html += '<div style="margin-top:12px;"><button class="btn btn-primary" onclick="closeModal()">关闭</button></div>';
+  }
+  content.innerHTML = html;
+  overlay.classList.add('active');
+}
+
+function doResearch(cost) {
+  if(game.funds<cost) { showToast('❌ 资金不足，需要'+cost+'万'); return; }
+  game.funds -= cost;
+  if(cost===50) { game.development += 5; showToast('📡 海洋监测网络建成，发展加速'); }
+  if(cost===80) { game.ecology = Math.min(100, game.ecology+15); showToast('🌿 生态修复技术突破，生态分+15'); }
+  if(cost===100) { game.funds += 30; showToast('🤖 智能港口投用，资金收益提升'); }
+  if(cost===200) { game.development += 20; game.influence += 20; showToast('⚡ 海洋能源网启动，解锁新技术'); }
+  updateUI();
+  logEvent('🔬 科研投入'+cost+'万', '新技术落地应用');
+  closeModal();
+}
+
+function showZoneInfo(id) {
+  const z = ZONES.find(x=>x.id===id);
+  if(!z) return;
+  const built = game.buildings[id];
+  const overlay = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  let html = '<h2>'+z.icon+' '+z.name+'</h2>';
+  html += '<p>'+z.desc+'</p>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+  html += '<div class="stat-item"><div class="label">投资额</div><div class="value gold">'+z.cost+'万</div></div>';
+  html += '<div class="stat-item"><div class="label">发展增益</div><div class="value blue">+'+z.devGain+'</div></div>';
+  html += '<div class="stat-item"><div class="label">生态影响</div><div class="value '+(z.ecoGain?'green':'red')+'">'+(z.ecoGain?'+'+z.ecoGain:'-'+z.ecoCost)+'</div></div>';
+  html += '<div class="stat-item"><div class="label">状态</div><div class="value" style="color:'+(built?'#4ADE80':'#aaa')+'">'+(built?'✅ 已建成':'⏳ 待开发')+'</div></div>';
+  html += '</div>';
+  if(!built) html += '<button class="btn btn-gold" onclick="buildZone(''+id+'')">🏗 投资建设（'+z.cost+'万）</button> ';
+  html += '<button class="btn btn-primary" onclick="closeModal()">关闭</button>';
+  content.innerHTML = html;
+  overlay.classList.add('active');
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+
+// ===== 存档系统 =====
+function saveGame() {
+  try {
+    localStorage.setItem('azure_city_save', JSON.stringify(game));
+    showToast('💾 游戏已存档');
+  } catch(e) { showToast('❌ 存档失败'); }
+}
+
+function loadGame() {
+  try {
+    const data = localStorage.getItem('azure_city_save');
+    if(!data) { showToast('📂 没有找到存档'); return; }
+    game = JSON.parse(data);
+    updateUI();
+    showToast('📂 存档已读取（'+game.year+'年）');
+  } catch(e) { showToast('❌ 读档失败'); }
+}
+
+// ===== 启动 =====
+window.onload = init;
+</script>
 </body>
 </html>
